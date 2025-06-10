@@ -18,7 +18,7 @@ const List = () => {
   const fetchUsers = async (roleEndpoint) => {
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`https://sathish07-support-desk-project.hf.space/users/${roleEndpoint}`, {
+      const res = await fetch(`https://sathish07-support-desk-project.hf.space/api/users/${roleEndpoint}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
