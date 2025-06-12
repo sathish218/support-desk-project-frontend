@@ -13,12 +13,14 @@ const List = () => {
   const [users, setUsers] = useState([]);
   const [activeRole, setActiveRole] = useState("");
   const navigate = useNavigate();
+  const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local backend
+
 
   // Fetch users by role endpoint ("employees" or "it-support")
   const fetchUsers = async (roleEndpoint) => {
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`https://sathish07-support-desk-project.hf.space/api/users/${roleEndpoint}`, {
+      const res = await fetch(`${BASE_URL}/users/${roleEndpoint}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

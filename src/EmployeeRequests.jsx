@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, CircularProgress, Paper, Button } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 
+const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local backend
+
+
 const EmployeeRequests = () => {
   const { email: routeEmail } = useParams();
   const navigate = useNavigate();
@@ -16,8 +19,8 @@ const EmployeeRequests = () => {
 
   const token = localStorage.getItem('token');
   const url = routeEmail
-    ? `https://sathish07-support-desk-project.hf.space/api/requests?email=${routeEmail}`
-    : 'https://sathish07-support-desk-project.hf.space/api/requests';
+    ? `${BASE_URL}/api/requests?email=${routeEmail}`
+    : `${BASE_URL}/api/requests`;
 
   useEffect(() => {
     const fetchRequests = async () => {

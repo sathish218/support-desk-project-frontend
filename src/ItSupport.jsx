@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import Loader from "./Loader";
+import emailjs from "@emailjs/browser";
 
 const ItSupport = () => {
   const [requests, setRequests] = useState([]);
@@ -13,6 +14,9 @@ const ItSupport = () => {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+
+const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local backend
+
 
   const token = localStorage.getItem("token");
 
@@ -30,19 +34,13 @@ const ItSupport = () => {
 
   const fetchAllRequests = async () => {
     setLoading(true);
-
-    // Create a promise that resolves after 1.5 seconds
     const delay = new Promise((resolve) => setTimeout(resolve, 1500));
-
     try {
-      const res = await fetch("https://sathish07-support-desk-project.hf.space/api/requests", {
+      const res = await fetch(`${BASE_URL}/api/requests`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-
-      // Wait for both fetch and delay to finish
       await Promise.all([delay]);
-
       setRequests(data);
     } catch (error) {
       console.error("Error fetching requests:", error);
@@ -56,15 +54,11 @@ const ItSupport = () => {
       ? requests
       : requests.filter((req) => req.priority === priorityFilter);
 
-  if (!user) {
-    return <AlertBox>Loading user data...</AlertBox>;
-  }
+  if (!user) return <AlertBox>Loading user data...</AlertBox>;
 
   const userRole = user.role.toLowerCase();
-
-  if (userRole !== "employee" && userRole !== "it-support") {
+  if (userRole !== "employee" && userRole !== "it-support")
     return <AlertBox>You do not have permission to access this page.</AlertBox>;
-  }
 
   const handleStatusChange = async (requestId, newStatus) => {
     if (userRole !== "it-support") {
@@ -75,7 +69,7 @@ const ItSupport = () => {
     setUpdatingStatus(true);
     try {
       const res = await fetch(
-        `https://sathish07-support-desk-project.hf.space/api/requests/${requestId}/status`,
+        `${BASE_URL}/api/requests/${requestId}/status`,
         {
           method: "PUT",
           headers: {
@@ -87,8 +81,6 @@ const ItSupport = () => {
       );
 
       await fetchAllRequests();
-
-      // Wait 1.5 seconds *after* fetch finishes before alert
       await new Promise((r) => setTimeout(r, 1500));
 
       if (res.ok) {
@@ -114,36 +106,30 @@ const ItSupport = () => {
 
     setSendingEmail(true);
     try {
-      const res = await fetch("https://sathish07-support-desk-project.hf.space/api/send-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          to: selectedRequest.email,
-          subject: "Support Request Update",
-          body: emailBody,
-        }),
-      });
+      const templateParams = {
+        to_email: selectedRequest.email,
+        to_name: selectedRequest.employeeName,
+        from_name: user.name,
+        message: emailBody,
+      };
 
-      // Wait 1.5 seconds *after* sending before alert
+      await emailjs.send(
+        "service_lueyybl",     // replace with your EmailJS service ID
+        "your_template_id",    // replace with your EmailJS template ID
+        templateParams,
+        "gp1KYWpo6CswIDiyS="      // replace with your EmailJS public key
+      );
+
       await new Promise((r) => setTimeout(r, 1500));
-
-      if (res.ok) {
-        alert("Email sent successfully");
-        setEmailBody("");
-      } else {
-        alert("Failed to send email");
-      }
+      alert("Email sent successfully via EmailJS.");
+      setEmailBody("");
     } catch (error) {
-      console.error("Email sending failed:", error);
+      console.error("EmailJS sending failed:", error);
       alert("Failed to send email.");
     }
     setSendingEmail(false);
   };
 
-  // NEW: AI elaboration handler
   const handleElaborateEmail = async () => {
     if (!emailBody.trim()) {
       alert("Type something first to get elaboration.");
@@ -151,9 +137,8 @@ const ItSupport = () => {
     }
 
     setAiLoading(true);
-
     try {
-      const res = await fetch("https://sathish07-support-desk-project.hf.space/api/generate-ai-reply", {
+      const res = await fetch(`${BASE_URL}/api/generate-ai-reply`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -172,21 +157,14 @@ const ItSupport = () => {
       console.error("AI elaboration failed:", error);
       alert("Failed to get AI elaboration.");
     }
-
     setAiLoading(false);
   };
 
-  if (loading) {
-    return <Loader />;
-  }
+  if (loading) return <Loader />;
 
   return (
     <>
-      {(updatingStatus || sendingEmail || aiLoading) && (
-        <LoadingOverlay>
-          <Loader />
-        </LoadingOverlay>
-      )}
+      {(updatingStatus || sendingEmail || aiLoading) && <LoadingOverlay><Loader /></LoadingOverlay>}
 
       <DashboardWrapper>
         <PageTitle>IT Support Dashboard</PageTitle>
@@ -233,9 +211,7 @@ const ItSupport = () => {
                   <label>Status:</label>
                   <StatusSelect
                     value={req.status.toLowerCase()}
-                    onChange={(e) =>
-                      handleStatusChange(req.id, e.target.value)
-                    }
+                    onChange={(e) => handleStatusChange(req.id, e.target.value)}
                     disabled={
                       userRole !== "it-support" || updatingStatus || sendingEmail || aiLoading
                     }
@@ -296,6 +272,8 @@ const ItSupport = () => {
     </>
   );
 };
+
+
 
 
 

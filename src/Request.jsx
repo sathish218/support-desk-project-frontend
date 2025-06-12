@@ -11,6 +11,9 @@ const RequestPage = () => {
   const [request, setRequest] = useState({ message: "", priority: "low" });
   const [status, setStatus] = useState({ message: "", isError: false });
   const [loading, setLoading] = useState(false);
+ 
+const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local backend
+
 
   const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user"));
@@ -35,7 +38,7 @@ const RequestPage = () => {
     };
 
     try {
-      const res = await fetch("https://sathish07-support-desk-project.hf.space/api/requests", {
+      const res = await fetch(`${BASE_URL}/api/requests`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

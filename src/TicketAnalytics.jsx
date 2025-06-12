@@ -14,6 +14,9 @@ const TicketAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const token = localStorage.getItem("token");
 
+const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local backend
+
+
   useEffect(() => {
     document.title = "Ticket Analytics";
     fetchData();
@@ -22,7 +25,7 @@ const TicketAnalytics = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("https://sathish07-support-desk-project.hf.space/api/requests/status-counts", {
+      const res = await fetch(`${BASE_URL}/api/requests/status-counts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

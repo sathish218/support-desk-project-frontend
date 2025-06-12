@@ -4,6 +4,8 @@ import { FaUserCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { AiFillBuild } from "react-icons/ai";
 
+const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local backend
+
 const Header = () => {
   const navigate = useNavigate();
   const [showUserPopup, setShowUserPopup] = useState(false);
@@ -18,37 +20,35 @@ const Header = () => {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-  const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token');
 
-  if (!token) {
-    setIsLoggedIn(false);
-    return;
-  }
-
-  fetch('https://sathish07-support-desk-project.hf.space/me', {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  })
-    .then(res => {
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-      return res.json();
-    })
-    .then(data => {
-      setUser(data);
-      setIsLoggedIn(true);
-    })
-    .catch(err => {
-      console.error('Error fetching user:', err);
+    if (!token) {
       setIsLoggedIn(false);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-    });
-}, []);
+      return;
+    }
 
-
+    fetch(`${BASE_URL}/me`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        setUser(data);
+        setIsLoggedIn(true);
+      })
+      .catch(err => {
+        console.error('Error fetching user:', err);
+        setIsLoggedIn(false);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      });
+  }, []);
 
   const toggleUserPopup = () => setShowUserPopup(prev => !prev);
   const handleRoleChange = (event) => setRole(event.target.value);
@@ -69,9 +69,7 @@ const Header = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const url = isSignUp
-      ? "https://sathish07-support-desk-project.hf.space/signup"
-      : "https://sathish07-support-desk-project.hf.space/login";
+    const url = isSignUp ? `${BASE_URL}/signup` : `${BASE_URL}/login`;
 
     const payload = isSignUp
       ? { name, email, password, role }
@@ -103,15 +101,12 @@ const Header = () => {
       setIsLoggedIn(true);
       setShowUserPopup(false);
 
-      // Clear form
       setName("");
       setEmail("");
       setPassword("");
       setRole("");
 
       alert(`${isSignUp ? "Sign-up" : "Login"} successful!`);
-
-      // Redirect to profile if needed
       navigate("/profile");
     } catch (err) {
       console.error("Error:", err);
@@ -206,12 +201,7 @@ const Header = () => {
   );
 };
 
-// Styles remain unchanged
-// (You already pasted correct styled-components)
-
-
-
-// Styled-components (same as before)
+// Styled components (unchanged)
 const HeaderWrapper = styled.div`
   height: 70px;
   background-color: #fff;
@@ -366,10 +356,13 @@ const StyledWrapper = styled.div`
     margin-top: 15px;
   }
 
-  .agreement a {
-    text-decoration: none;
+  .link-button {
+    background: none;
+    border: none;
     color: #0099ff;
     font-size: 15px;
+    cursor: pointer;
+    text-decoration: underline;
   }
 `;
 
