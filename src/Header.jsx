@@ -4,7 +4,7 @@ import { FaUserCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { AiFillBuild } from "react-icons/ai";
 
-const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local backend
+const BASE_URL = "https://sathish07-support-desk-project.hf.space";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -16,8 +16,17 @@ const Header = () => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
 
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
+
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+ const isValidPassword = (password) =>
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d])[A-Za-z\d\S]{6,}$/.test(password);
+
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -33,9 +42,7 @@ const Header = () => {
       }
     })
       .then(res => {
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         return res.json();
       })
       .then(data => {
@@ -52,7 +59,11 @@ const Header = () => {
 
   const toggleUserPopup = () => setShowUserPopup(prev => !prev);
   const handleRoleChange = (event) => setRole(event.target.value);
-  const toggleForm = () => setIsSignUp(prev => !prev);
+  const toggleForm = () => {
+    setIsSignUp(prev => !prev);
+    setEmailError("");
+    setPasswordError("");
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -68,6 +79,24 @@ const Header = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    let valid = true;
+
+    if (!isValidEmail(email)) {
+      setEmailError("Please enter a valid email address.");
+      valid = false;
+    } else {
+      setEmailError("");
+    }
+
+    if (!isValidPassword(password)) {
+      setPasswordError("Password must be at least 6 characters and include a number and special char.");
+      valid = false;
+    } else {
+      setPasswordError("");
+    }
+
+    if (!valid) return;
 
     const url = isSignUp ? `${BASE_URL}/signup` : `${BASE_URL}/login`;
 
@@ -90,6 +119,7 @@ const Header = () => {
       }
 
       localStorage.setItem("token", data.token);
+
       const userData = {
         name: data.name || name,
         email: data.email || email,
@@ -107,7 +137,7 @@ const Header = () => {
       setRole("");
 
       alert(`${isSignUp ? "Sign-up" : "Login"} successful!`);
-      navigate("/profile");
+      navigate("/");
     } catch (err) {
       console.error("Error:", err);
       alert("Error occurred during submission.");
@@ -160,6 +190,8 @@ const Header = () => {
                       required
                       className="input"
                     />
+                    {emailError && <p style={{ color: 'red', fontSize: '0.9em' }}>{emailError}</p>}
+
                     <input
                       placeholder="Password"
                       type="password"
@@ -168,6 +200,8 @@ const Header = () => {
                       required
                       className="input"
                     />
+                    {passwordError && <p style={{ color: 'red', fontSize: '0.9em' }}>{passwordError}</p>}
+
                     {isSignUp && (
                       <div className="dropdown-container">
                         <label htmlFor="role" className="dropdown-label">Select Role:</label>
