@@ -3,6 +3,7 @@ import styled from "styled-components";
 import Loader from "./Loader";
 import emailjs from "@emailjs/browser";
 
+
 const ItSupport = () => {
   const [requests, setRequests] = useState([]);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -15,8 +16,12 @@ const ItSupport = () => {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
 
-const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local backend
+  const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+  const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+  const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+  const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 
+  const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local backend
 
   const token = localStorage.getItem("token");
 
@@ -68,17 +73,14 @@ const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local bac
 
     setUpdatingStatus(true);
     try {
-      const res = await fetch(
-        `${BASE_URL}/api/requests/${requestId}/status`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ status: newStatus }),
-        }
-      );
+      const res = await fetch(`${BASE_URL}/api/requests/${requestId}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
 
       await fetchAllRequests();
       await new Promise((r) => setTimeout(r, 1500));
@@ -98,73 +100,80 @@ const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local bac
 
   const handleSendEmail = async () => {
     if (!emailBody.trim() || !selectedRequest) return;
-
-    if (userRole !== "it-support") {
-      alert("Access denied: Only IT-support can send emails.");
-      return;
-    }
+    if (userRole !== "it-support") return alert("Access denied");
 
     setSendingEmail(true);
     try {
       const templateParams = {
-        to_email: selectedRequest.email,
         to_name: selectedRequest.employeeName,
+        to_email: selectedRequest.email,
         from_name: user.name,
         message: emailBody,
       };
 
-      await emailjs.send(
-        "service_lueyybl",     // replace with your EmailJS service ID
-        "your_template_id",    // replace with your EmailJS template ID
-        templateParams,
-        "gp1KYWpo6CswIDiyS="      // replace with your EmailJS public key
-      );
-
-      await new Promise((r) => setTimeout(r, 1500));
-      alert("Email sent successfully via EmailJS.");
+      await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY);
+      alert("Email sent successfully!");
       setEmailBody("");
     } catch (error) {
-      console.error("EmailJS sending failed:", error);
+      console.error("EmailJS error:", error);
       alert("Failed to send email.");
+    } finally {
+      setSendingEmail(false);
     }
-    setSendingEmail(false);
   };
 
   const handleElaborateEmail = async () => {
-    if (!emailBody.trim()) {
-      alert("Type something first to get elaboration.");
-      return;
-    }
+    if (!emailBody.trim() || !selectedRequest || !user) return;
 
     setAiLoading(true);
     try {
-      const res = await fetch(`${BASE_URL}/api/generate-ai-reply`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ message: emailBody }),
-      });
+      const prompt = `
+You are an IT support assistant. Write a clear and professional email response to an employee named "${selectedRequest.employeeName}" regarding their IT issue.
 
-      if (res.ok) {
-        const data = await res.json();
-        setEmailBody(data.reply);
-      } else {
-        alert("Failed to get AI elaboration");
-      }
-    } catch (error) {
-      console.error("AI elaboration failed:", error);
-      alert("Failed to get AI elaboration.");
+Original message:
+"${emailBody}"
+
+Sign the email as "${user.name}" from IT Support.
+`;
+
+      const response = await fetch(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: prompt }],
+            max_tokens: 300,
+            temperature: 0.7,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      const reply = data.choices?.[0]?.message?.content;
+      if (reply) setEmailBody(reply.trim());
+      else alert("No response from AI.");
+    } catch (err) {
+      console.error("AI error:", err);
+      alert("Failed to generate email.");
+    } finally {
+      setAiLoading(false);
     }
-    setAiLoading(false);
   };
 
   if (loading) return <Loader />;
 
   return (
     <>
-      {(updatingStatus || sendingEmail || aiLoading) && <LoadingOverlay><Loader /></LoadingOverlay>}
+      {(updatingStatus || sendingEmail || aiLoading) && (
+        <LoadingOverlay>
+          <Loader />
+        </LoadingOverlay>
+      )}
 
       <DashboardWrapper>
         <PageTitle>IT Support Dashboard</PageTitle>
@@ -213,7 +222,10 @@ const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local bac
                     value={req.status.toLowerCase()}
                     onChange={(e) => handleStatusChange(req.id, e.target.value)}
                     disabled={
-                      userRole !== "it-support" || updatingStatus || sendingEmail || aiLoading
+                      userRole !== "it-support" ||
+                      updatingStatus ||
+                      sendingEmail ||
+                      aiLoading
                     }
                   >
                     <option value="pending">Pending</option>
@@ -239,7 +251,10 @@ const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local bac
                 value={emailBody}
                 onChange={(e) => setEmailBody(e.target.value)}
                 disabled={
-                  userRole !== "it-support" || sendingEmail || updatingStatus || aiLoading
+                  userRole !== "it-support" ||
+                  sendingEmail ||
+                  updatingStatus ||
+                  aiLoading
                 }
               />
               {userRole === "it-support" ? (
@@ -247,7 +262,10 @@ const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local bac
                   <SendButton
                     onClick={handleSendEmail}
                     disabled={
-                      !emailBody.trim() || sendingEmail || updatingStatus || aiLoading
+                      !emailBody.trim() ||
+                      sendingEmail ||
+                      updatingStatus ||
+                      aiLoading
                     }
                   >
                     {sendingEmail ? "Sending..." : "Send Email"}
@@ -273,18 +291,17 @@ const BASE_URL = "https://sathish07-support-desk-project.hf.space"; // Local bac
   );
 };
 
-
-
-
-
 //
 // ---------- Styled Components Below ----------
 //
 
 const LoadingOverlay = styled.div`
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(255,255,255,0.6);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -405,7 +422,11 @@ const PriorityTag = styled.span`
       ? "#fff59d"
       : "#a5d6a7"};
   color: ${(props) =>
-    props.priority === "high" ? "#b71c1c" : props.priority === "medium" ? "#f57f17" : "#2e7d32"};
+    props.priority === "high"
+      ? "#b71c1c"
+      : props.priority === "medium"
+      ? "#f57f17"
+      : "#2e7d32"};
 `;
 
 const Message = styled.p`
@@ -445,10 +466,7 @@ const StatusBadge = styled.span`
       : props.status === "resolved"
       ? "#4caf50"
       : "#f44336"};
-  color: ${(props) =>
-    props.status === "pending"
-      ? "#666"
-      : "white"};
+  color: ${(props) => (props.status === "pending" ? "#666" : "white")};
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 8px;
